@@ -1,0 +1,149 @@
+---
+title: "R Session Data Wrangle Practice"
+author: "Netra"
+date: "5/5/2021"
+output: html_document
+---
+
+Joining datasets
+```{r}
+library(tidyverse)
+library(nycflights13)
+#airlines lets you look up the full carrier name from its abbre‐ viated code:
+#airports gives information about each airport, identified by the faa airport code:
+#planes gives information about each plane, identified by its tailnum:
+#weather gives the weather at each NYC airport for each hour:
+
+ flights2 <- flights %>%
+      select(year:day, hour, origin, dest, tailnum, carrier)
+flights2
+
+ flights2 %>%
+      select(-origin, -dest) %>%
+      left_join(airlines, by = "carrier")
+```
+
+```{r}
+#View(flights)
+#View(airports)
+flights_latlon <- flights %>%
+  inner_join(select(airports, origin = faa, origin_lat = lat, origin_lon = lon),
+    by = "origin"
+  ) %>%
+  inner_join(select(airports, dest = faa, dest_lat = lat, dest_lon = lon),
+    by = "dest"
+  )
+
+#View(flights_latlon)
+
+flights_latlon %>%
+  slice(1:100) %>%
+  ggplot(aes(
+    x = origin_lon, xend = dest_lon,
+    y = origin_lat, yend = dest_lat
+  )) +
+  borders("state") +
+  geom_segment(arrow = arrow(length = unit(0.1, "cm"))) +
+  coord_quickmap() +
+  labs(y = "Latitude", x = "Longitude")
+```
+
+```{r}
+# to download the data directly:
+PopInfo <- read.csv("https://raw.githubusercontent.com/swcarpentry/r-novice-gapminder/gh-pages/_episodes_rmd/data/gapminder-FiveYearData.csv")
+# define a copy of the original dataset that we will clean and play with 
+View(PopInfo)
+```
+
+```{r}
+#Take the gapminder dataset and then filter to the “Americas” continents and the year 2007, and then select the country and life expectancy variables.
+PopInfo %>%
+  filter(continent == "Americas", year == "2007") %>%
+  select(country, lifeExp)
+```
+
+
+```{r}
+#select all columns exceept continent (hint use -)
+PopInfo %>% 
+  select(-continent) 
+```
+
+```{r}
+#to keep only the rows that have a recorded population of at least 1 billion, 
+PopInfo %>% 
+  filter(pop >= 1000000000) 
+```
+
+```{r}
+#specify multiple filter conditions using a comma
+#filter to rows from 1992 that have a population of at least 100 million in that year.
+PopInfo %>% 
+  filter(pop > 100000000, year == 1992) 
+```
+
+```{r}
+#mutate
+#add a new variable, gdp, to the gapminder data frame. gdp is equal to gdpPercap multiplied by pop, and then look at the first 6 rows of the data frame using the classic head() function.
+GDPInfo <- PopInfo %>% 
+  mutate(gdp = gdpPercap * pop) 
+head(GDPInfo)
+```
+
+```{r}
+#arrange all rows in the data frame in order of increasing life expectancy.
+PopInfo %>% 
+  arrange(lifeExp) %>%
+  head
+
+```
+
+```{r}
+#arrange in descending order, you need to wrap the variable name in the desc() function.
+PopInfo %>% 
+  arrange(desc(gdpPercap)) %>%
+  head
+```
+
+```{r}
+#re-define the gapminder dataset so that the rows are in order of increasing year, and the countries are in alphabetical order within each year (the secondary arrange variable).
+PopInfo %>% 
+  arrange(year, country) %>% 
+  head
+```
+
+```{r}
+#filter the data frame to only the country-years that have life expectancy above the average life expectancy for their continent
+View(PopInfo)
+PopInfo %>%
+  group_by(continent) %>%
+  filter(lifeExp > mean(lifeExp)) %>%
+  ungroup()
+#The group_by() function can be really useful if you want to apply a function independently within groups of observations (where the groups are specified by a categorical variable in your data frame). Think of group_by() as splitting your data frame into several separate data frames based on the categorical variable you specify. All functions that you apply to the grouped data frame are applied separately to each group until you specify an ungroup() function.
+```
+
+```{r}
+#number of countries from each continent included post-filtering when grouping by continent is:
+PopInfo %>%
+  group_by(continent) %>%
+  filter(lifeExp > mean(lifeExp)) %>%
+  ungroup() %>%
+  count(continent)
+```
+
+```{r}
+#split the data frame into groups by continent and adds a row to each group corresponding to the average life expectancy of all of the countries in that group/continent
+PopInfo %>% 
+  # first filter to 2007
+  filter(year == 2007) %>%
+  # group by continent
+  group_by(continent) %>%
+  # add a column within each continent corresponding to the average life expectancy
+  mutate(continent_lifeExp = mean(lifeExp)) %>%
+  # ungroup the data frame
+  ungroup() %>% 
+  # only show a few variables
+  select(country, continent, lifeExp, continent_lifeExp) %>%
+  head(10)
+```
+

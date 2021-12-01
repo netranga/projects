@@ -1,0 +1,64 @@
+---
+title: "R Tidyverse Function M Copy"
+author: "Netra"
+date: "5/10/2021"
+output: html_document
+---
+
+```{r}
+#Before you get started do the following
+#Install dslabs package
+#load the tidyverse and dslabs library
+#After loading the library load the dataset murders (use data("murders")) to do so
+```
+
+***You will need the following functions to answer the questions. Filter, Mutate, Select, Arrange, Summarize, Group_By and Count
+
+
+1. Create a new variable called rate that takes the variable total and divides it by the variable population and then multiplies this by 10000
+```{r}
+
+```
+
+2. Modify the dataset to only include the the state, region and rate columns and then only show the rows for which the murder rate is lower than 0.71 (think which functions you will need to use to do these two actions)
+```{r}
+
+```
+
+3. Create a variable called MurderRank which contains the rank, from highest to lowest murder rate. Hint using the function rank(-x) gives you the ranks from highest to lowest.
+```{r}
+
+```
+
+4. Use a tidyverse function that will help you be able to show the top 5 states with the highest murder rates. Remember that you can sort based on the rank column.
+```{r}
+
+```
+
+5. Create a new data frame called no_south that removes states from the South region. How many states are in this category?
+```{r}
+
+```
+
+6. Suppose you want to live in the Northeast or West and want the murder rate to be less than 1. We want to see the data for the states satisfying these options.
+```{r}
+
+```
+
+7. Order the states by population size
+```{r}
+
+```
+
+8. Computer the average murder rate for the whole country (hint use summarize)
+```{r}
+
+```
+
+
+9. Compute the median murder rate in the four regions of the country (hint need to use group_by to analyze data based on region and use summarize function)
+```{r}
+
+```
+
+
