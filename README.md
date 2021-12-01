@@ -10,6 +10,9 @@ Tidyverse Answer Key:
 I created this file to give to my student to test his knowledge on the tidyverse package which involves functions such as filter selec, mutate, rename, etc. 
 The answer key includes the correct answer for each of the questions-I got the dataset from one of the packages within R and created some of the questions myself
 
+Reading Audit:
+I had to clean and alter a dataset with student's literacy performance results (the dataset was unorganized and I had to convert alphabetic values into numeric) 
+
 Joins Answer Key:
 I created this file to give to my student to test his knowledge on joins which involve inner join, left join, right join, etc. 
 The answer key includes the correct answer for each of the questions-I got the dataset from one of the packages within R and created some of the questions myself
