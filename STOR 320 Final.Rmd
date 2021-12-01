@@ -1,0 +1,281 @@
+---
+title: "Final Paper"
+author: "STOR 320.02 Group 6"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(bigstep)
+library(purrr)
+library(tidyverse)
+library(modelr)
+library(broom)
+library(glmnet)
+library(xtable)
+library(tibble)
+library(magrittr)
+library(kableExtra)
+library(knitr)
+
+AB_NYC_2019 <- read_csv("Downloads/new-york-city-airbnb-open-data (1)/AB_NYC_2019.csv")
+
+AB_NYC_2019F <- na.omit(AB_NYC_2019) #NA values are omitted
+
+NYCManhattan = filter(AB_NYC_2019F, neighbourhood_group == "Manhattan") 
+NYCQueens = filter(AB_NYC_2019F, neighbourhood_group == "Queens")
+NYCBrooklyn = filter(AB_NYC_2019F, neighbourhood_group == "Brooklyn")
+NYCStatenIsland = filter(AB_NYC_2019F, neighbourhood_group == "Staten Island")
+NYCBronx = filter(AB_NYC_2019F, neighbourhood_group == "Bronx") #875
+NYCFinal = AB_NYC_2019F %>% select(neighbourhood_group, price, room_type,  minimum_nights, number_of_reviews, reviews_per_month, calculated_host_listings_count, availability_365)
+NYCQuantitative = NYCFinal %>% select(minimum_nights, price, number_of_reviews, reviews_per_month, calculated_host_listings_count, availability_365)
+```
+
+# INTRODUCTION
+
+  Airbnb was introduced in 2008 and since then has revolutionized the travel industry. There are over 660,000 listings in the United States and over 6 million worldwide. Although this company has forever changed the traveling industry, there has not been much analysis conducted on Airbnb data. Therefore, our group thought it would be interesting to look into a larger dataset that is publically available to further analyze Airbnb data. We decided to investigate any patterns we could find regarding traveler's preferences when selecting housing accommodation in a large city located in the United States. We chose an Airbnb dataset with all the listings in New York City because it allowed us to explore and analyze the trends of listings in one of the largest cities in the United States. Having a large dataset allowed us to identify trends such as any cluster patterns or relationships between price and various neighborhood locations.
+  
+
+
+
+  Following the Exploratory Data Analysis, our group decided on two questions deserving of further exploration. The first question is: which combination of variables creates the best model to most reliably predict price? This question is interesting because it requires us to determine which of the variables are considered significant, and within the significant variables, which combination of them results in the best model. It deserves further exploration because various modeling techniques will indicate different optimal models. From these various models, we must analyze which of the modeling techniques is most accurate and provides the best model for predicting price. By elucidating which factors most directly influence the price of Airbnb listings, the owner of the data is empowered with insight as to how prices may fluctuate with changes in these factors. With further analysis, this could potentially be extrapolated to other large Airbnb datasets and applied to all types of listings, regardless of location. The world may be interested in this question because determining what factors are important to travelers when deciding where to stay is relevant to the travel industry. Hoteliers and renters can accordingly increase their rent based on what is in demand according to their specific market of customers. Overall, this question allows for further exploration into what factors influence the price of a listing. 
+  
+
+
+
+  Building off our first question, the second question is: which combination of variables, based on the dataset of each specific neighborhood group, can be used to create the best model to most reliably predict price? We are filtering the overall data to create subsets that only contain listings of each neighborhood group. Following this, we are repeating the same steps from the previous question by using various modeling techniques to determine which combination of variables results in the best model for predicting price. The purpose of extending the first question to this is to determine whether the "best" model varies based on location. This question is interesting to explore and deserves further exploration because it allows us to look into the variation of price resulting from geographical differences. Each neighborhood varies in average listing price therefore each location may vary in which factors are most significant in predicting the price.  Trends can be analyzed regarding the average price in each location. For example, travelers looking for listings in a more expensive neighborhood group may place a greater emphasis on having an entire home as room type in comparison to those looking for cheaper listings. With further analysis, we can determine the type of travelers who prefer more economical listings compared to more expensive ones. There may be a relationship between listing prices and certain demographic characteristics. Hoteliers and freelance renters could utilize our findings to adjust their prices to best match travelers likely to use their services.  
+ 
+
+
+# DATA
+
+  The dataset we obtained is a public dataset that includes direct data from Airbnb published by a company called Inside Airbnb. Inside Airbnb is an investigatory website that reports scraped data on the property rental marketplace for many cities in the United States. The data on Inside Airbnb's website is sourced from publicly available information from Airbnb. The data includes updated information up until September 12th, 2019, which is when the dataset was compiled. Our dataset, AB_NYC_2019, includes 48,895 entries. It is a sample of the most recent year’s data from the entire dataset that describes the listing activity and metrics in New York City since 2008. To conduct our modeling techniques, we filtered the dataset to remove all NA values, hence, our final dataset had 38,821 entries.
+
+
+  The dataset includes 16 variables: id, name, host_id, host_name, neighbourhood_group, neighbourhood, latitude, longitude, room_type, price, minimum_nights, number_of_reviews, last_review, reviews_per_month, calculated_host_listing, and availability_365. We decided to exclude 8 variables: id, name, host_id, host_name, last_review, neighbourhood, latitude and longitude. These variables were deemed insignificant to use in our model selection process as they have no relationship with the price of a listing. Id and host_id are random 4 digit numbers assigned to specific listings and hosts which have no relationship with the price of a listing. Name and host_name are two categorical variables that are solely the name of the listing and the host. Last_review is an 8 digit quantitative variable that includes the year, month and day of the last published review, which does not help to predict price, as the length of time since the last review does not affect the price of the listing. We also decided to remove neighborhood from the list of variables used during model selection. This was decided because we already have another variable in neighbourhood_group approximating location, with 5 unique entries, whereas neighbourhood has an overwhelming 221 unique entries, diminishing its value for use in model selection. Finally, latitude and longitude were removed as we determined these variables did not have a linear relationship with price. Due to the lack of linear relationship they have with price, they were skewing the best models. Therefore, to improve model accuracy these variables were removed.
+
+
+  For our model selection process, we decided to keep the remaining 8 variables. Neighbourhood_group is a qualitative variable that represents the various neighborhood groups in NYC. Each listing belongs to one of the five neighborhoods of the city: Manhattan, Brooklyn, Queens, Staten Island, and the Bronx. Latitude and Longitude are both quantitative variables that indicate the exact geographical coordinates of a listing and are measured in degrees. Room type is a qualitative variable that indicates the type of room the listing provides. The three types of rooms are private room, entire room/apartment, or a shared room. Different rooms would very likely correspond with different prices. The next variable, price, is a quantitative, dependent variable that represents the amount a host charges for their listing per night. This is the variable that our group is trying to predict with the models we are creating using different modeling techniques. Minimum_nights is quantitative and indicates the minimum number of nights the host requires travelers to stay at the specified listing. Longer stays will likely correspond to higher prices. The variable number_of_reviews is also quantitative and represents the total number of reviews left for a certain listing. Reviews_per_month is a quantitative variable that indicates the average number of reviews received per month. This is calculated by dividing the total number of reviews by the number of months the listing has been available. Frequently reviewed Airbnb hosts could justify a premium price relative to their unreviewed counterparts. Calculated_host_listing is a quantitative variable that indicates the number of listings the specific host has in New York City. Availability_365 is quantitative and the final variable in the dataset. It indicates the number of days throughout the year that a listing is available for rent. We plan to determine which combination of these variables results in the best model for the overall data and then for each specific neighborhood group to see if these models vary.
+
+###Figure 1: Spatial Plot of NYC with Datapoints
+```{r pressure, echo=FALSE, message= FALSE}
+AB = AB_NYC_2019
+library(ggmap)
+apikey = "AIzaSyAYvUyXN91JVQleVXFCkWLTyHIDbBVAJiY"
+ggmap::register_google(key = apikey)
+onMap = ggmap(get_googlemap(center = c(lon =-74.0360,lat=40.7128), zoom=10,scale=2,maptype = "terrain",color='color'))
+onMap + geom_point(data=AB,aes(x=longitude,y=latitude,color=neighbourhood_group), size=0.001) + labs(color = "Neighbourhood Group")
+
+```
+
+###Figure 2
+```{r, echo= FALSE}
+room_type_plot <- ggplot(data = AB_NYC_2019) +
+geom_bar(aes(x=room_type, fill=room_type)) +ggtitle("Frequency Distribution of Room Type")  + xlab("Room Type") + ylab("Frequency")
+room_type_plot + guides(fill=guide_legend(title="Room Type"))
+```
+
+
+###Figure 3
+```{r, echo = FALSE}
+ng_plot <- ggplot(data=AB_NYC_2019) +
+geom_bar(aes(x=neighbourhood_group, fill=neighbourhood_group)) +ggtitle("Frequency Distribution of Neighbourhood Group")  + xlab("Neighbourhood Group") + ylab("Frequency")
+ng_plot + guides(fill=guide_legend(title="Neighbourhood Group"))
+```
+
+###Table 1: Summary Statistics
+```{r, echo=FALSE}
+summary_table_NYC <- summary(NYCQuantitative, digits = 6)
+summary_table_NYC %>%
+  kable(col.names=c("Price","Minimum Nights","Number of Reviews", "Reviews per Month", "Calculated Host's Listings Count","Availability")) %>%
+  kable_styling()
+```
+
+
+# RESULTS
+
+In order to find the best model, we employed several methods of model selection for both of our questions. The methods we used were forward selection, backward selection, ridge, and lasso. We applied each of these methods on the full data set with the unused variables and missing values filtered out. 
+  
+  
+  During our analysis of model selection, we realized the forward and backward selection was producing the same best model. These models had the same AIC values and variables. This is a good indicator because they are essentially opposite processes; forwards selection starts with no variables and iteratively adds the most predictive variables, whereas backward selection starts with all of the variables and iteratively removes the worst predictors. In forwards selection, a regressor added at an earlier step of the process may later become redundant based on its relationship with regressors added later. However, since forwards and backward yield the same model, we can be sure that this model contains only terms of significant value. We calculated the out-of-sample root mean squared error (RMSE) to compare the models to see which is best. RMSE is the standard deviation of the residuals. It indicates how spread out the residuals are and how concentrated the data is around the line of best fit. Calculating the RMSE is a way to measure the error of a model. When comparing models we chose the best model by looking for the one that minimized the RMSE, thus showing that it minimized the errors the best.
+  
+  
+  To address our second question regarding predictive models for the individual neighbourhoods, we had to employ similar methods to the ones we used in the previous question. However, when undergoing these processes, we filtered the original data set by the neighborhood group. By doing so we obtained individual models from our stepwise selection, ridge, and lasso for each neighbourhood. Similar to our findings for the entire city we noticed that for every neighbourhood, forward and backward selection yielded the same model with identical AIC values. We also noticed that the full model was the same as the best forward and backward model for Brooklyn and Manhattan. Below are tables representing the various RMSE values obtained from each selection method for the overall dataset as well as each neighbourhood group.
+
+##Question 1 Results
+
+###Table 1: Models for Overall Dataset
+```{r, echo = FALSE}
+Models <- c("Full", "Forwards/Backwards", "Lasso", "Ridge")
+RMSE <- c(185.0156, 185.007, 154.2041, 154.199)
+mydata <- cbind.data.frame(Models, RMSE)
+mydata <- as_tibble(mydata)
+options(pillar.sigfig = 8)
+kable(head(mydata)) %>%
+  kable_styling()
+```
+Based on Table 1, we found that lasso regression yielded the best model for predicting the prices of listings in the entire city. Our lasso regression model yielded an RMSE value of 154.2041. The table below shows the variables included in the lasso model with their corresponding coefficients. From the model it can be seen that all the variables are included in the best model. They all have extremely small coefficients but none are exactly 0. 
+
+###Table 2: Best Overall Model for Full Dataset
+```{r, echo=FALSE}
+options(scipen = -1000)
+Variables <- c("Intercept", "neighbourhood_groupBrooklyn", "neighbourhood_groupManhattan", "neighbourhood_groupQueens", "neighbourhood_groupStatenIsland", "room_typePrivate room", "room_typeShared room" , "minimum_night", "number_of_reviews", "reviews_per_month", "calculated_host_listings_count","availability_365")
+Values <- c("1.447059e+02", "-3.921277e-35", "6.911687e-35", "-5.299832e-35", "-5.722713e-35" , "-1.096584e-34", "-8.387728e-35", " 3.196400e-37", "-1.485275e-37", "-4.790512e-36", "3.735947e-37", "1.139624e-37"  )
+mydata <- cbind.data.frame(Variables, Values)
+mydata <- as_tibble(mydata)
+
+kable(mydata) %>%
+  kable_styling() %>% add_header_above(c("Full Model Ridge Coefficients" = 2))
+
+```
+
+```{r}
+Variables <- c("Intercept", "neighbourhood_groupBrooklyn", "neighbourhood_groupManhattan", "neighbourhood_groupQueens", "neighbourhood_groupStatenIsland", "room_typePrivate room", "room_typeShared room" , "minimum_night", "number_of_reviews", "reviews_per_month", "calculated_host_listings_count","availability_365")
+Values <- c("135.53349020", "31.58063621", "80.61220446", "13.50052386", "-17.96926401" , "-105.78804617", " -138.54536097", " -0.05980082 ", " -0.16187347", "-1.66399507", "-0.03711123", "0.15839104"  )
+mydata <- cbind.data.frame(Variables, Values)
+mydata <- as_tibble(mydata)
+
+kable(mydata) %>%
+  kable_styling() %>% add_header_above(c("Full Model Lasso Coefficients" = 2))
+```
+
+neighbourhood_groupQueens          13.50052386
+neighbourhood_groupStaten Island  -17.96926401
+room_typePrivate room            -105.78804617
+room_typeShared room             -138.54536097
+minimum_nights                     -0.05980082
+number_of_reviews                  -0.16187347
+reviews_per_month                  -1.66399507
+calculated_host_listings_count     -0.03711123
+availability_365                    0.15839104
+
+##Question 2 Results
+
+###Table 2.1: Models for Brooklyn Subset
+```{r, echo = FALSE}
+Models <- c("Full", "Forwards/Backwards", "Lasso", "Ridge")
+RMSE <- c(161.0062, 160.9827, 186.2851, 186.2717)
+mydata <- cbind.data.frame(Models, RMSE)
+mydata <- as_tibble(mydata)
+options(pillar.sigfig = 8)
+kable(head(mydata)) %>%
+  kable_styling() %>% add_header_above(c("Brooklyn" = 2))
+```
+As seen in Table 2.1, we found that stepwise selection yielded the best model for predicting prices of Airbnb listings in Brooklyn. The forward selection yielded an RMSE value of 160.9827. The variables included in this model are room_type, availability_365, number_of_reviews, reviews_per_month, and minimum_nights.
+
+
+
+###Table 2.2: Models for Bronx Subset
+```{r, echo = FALSE}
+Models <- c("Full", "Forwards/Backwards", "Lasso", "Ridge")
+RMSE <- c(55.90161, 55.68375, 64.20899, 64.19302)
+mydata <- cbind.data.frame(Models, RMSE)
+mydata <- as_tibble(mydata)
+options(pillar.sigfig = 8)
+kable(head(mydata)) %>%
+  kable_styling() %>% add_header_above(c("Bronx" = 2))
+```
+As illustrated in Table 2.2, we found that stepwise selection created the best model for predicting prices of Airbnb listings in the Bronx. The Forwards/Backwards model yielded an RMSE value of 55.68375. The variables included in this model are room_type, availability_365, reviews_per_month, minimum_nights, calculated_host_listings_count, and number_of_reviews.
+
+
+
+###Table 2.3: Models for Queens Subset
+```{r, echo = FALSE}
+Models <- c("Full", "Forwards/Backwards", "Lasso", "Ridge")
+RMSE <- c(169.13145, 169.098459, 86.05616, 86.26786)
+mydata <- cbind.data.frame(Models, RMSE)
+mydata <- as_tibble(mydata)
+options(pillar.sigfig = 8)
+kable(head(mydata)) %>%
+  kable_styling() %>% add_header_above(c("Queens" = 2))
+```
+Based on Table 2.3, we found that lasso regression yielded the best model for predicting the prices of the Airbnb listings in Queens. Lasso regression model yielded an RMSE value of 86.05616. The table below shows the variables included in the lasso model with their corresponding coefficients. From the model, it can be seen that none of the variables are in the best model and the only value in it is the intercept. 
+
+###Table 2.4: Best Overall Model for Queens
+```{r, echo=FALSE}
+options(scipen = -1000)
+Variables <- c("Intercept")
+Values <- c("9.847025e+01")
+mydata <- cbind.data.frame(Variables, Values)
+mydata <- as_tibble(mydata)
+
+kable(mydata) %>%
+  kable_styling() %>% add_header_above(c("Full Model Lasso Coefficients Queens" = 2))
+
+```
+
+
+###Table 2.5: Models for Staten Island Subset
+```{r, echo = FALSE}
+Models <- c("Full", "Forwards/Backwards", "Lasso", "Ridge")
+RMSE <- c(55.678340, 55.721518, 52.39426, 52.89603)
+mydata <- cbind.data.frame(Models, RMSE)
+mydata <- as_tibble(mydata)
+options(pillar.sigfig = 8)
+kable(head(mydata)) %>%
+  kable_styling() %>% add_header_above(c("Staten Island" = 2))
+```
+Based on Table 2.5, we found that lasso regression yielded the best model for predicting the prices of the Airbnb listings in Staten Island. The lasso regression model yielded an RMSE value of 52.39462. The table below shows the variables included in the lasso model with their corresponding coefficients. The table below shows the variables included in the lasso model with their corresponding coefficients. From the model, it can be seen that all the variables except calculated_host_listings_count are included in the best model.
+
+
+
+###Table 2.6: Best Overall Model for Staten Island
+```{r, echo= FALSE}
+options(scipen = -1000)
+Variables <- c("Intercept", "room_typePrivate room", "room_typeShared room" , "minimum_night", "number_of_reviews", "reviews_per_month", "availability_365")
+Values <- c("1.359154e+02", "-7.133374e+01", "-2.496739e+01", "-9.756455e-01", "-3.984435e-02" , "-5.851678e+00", " 2.753663e-02")
+mydata <- cbind.data.frame(Variables, Values)
+mydata <- as_tibble(mydata)
+
+kable(mydata) %>%
+  kable_styling() %>% add_header_above(c("Full Model Lasso Coefficients Staten Island" = 2))
+```
+
+
+
+
+###Table 2.7: Models for Manhattan Subset
+```{r, echo = FALSE}
+Models <- c("Full", "Forwards/Backwards", "Lasso", "Ridge")
+RMSE <- c(215.443529, 215.443529, 249.3439, 249.3216)
+mydata <- cbind.data.frame(Models, RMSE)
+mydata <- as_tibble(mydata)
+options(pillar.sigfig = 8)
+kable(head(mydata)) %>%
+  kable_styling() %>% add_header_above(c("Manhattan" = 2))
+```
+As illustrated in Table 2.7, we found that stepwise selection found the best model, which happened to be the same as our full model for predicting the price.  The model yielded an RMSE value of 215.4435. The variables included in this model were room_type, availability_365, number_of_reviews, minimum_nights, calculated_host_listings_count, and reviews_per_month.
+
+
+###Table 3: Variables in Each Best Forwards/Backwards Model for Each Neighbourhood Group
+```{r, echo = FALSE}
+
+Neighbourhoods <- c("Brooklyn", "Bronx", "Manhattan", "Queens", "Staten Island")
+RoomType <- c("X", "X", "X", "X", "X")
+MinimumNights <- c("X", "X", "X", "X", "0")
+NumberReviews <- c("X", "X", "X", "X", "0")
+ReviewsPerMonth <- c("X", "X", "X", "0", "X")
+CalculatedHostListings <- c("0", "X", "X", "X", "X")
+Avaliability365 <- c("X", "X", "X", "X", "X")
+mydata <- cbind.data.frame(Neighbourhoods, RoomType, MinimumNights, NumberReviews, ReviewsPerMonth, CalculatedHostListings, Avaliability365)
+mydata <- as_tibble(mydata)
+options(pillar.sigfig = 8)
+kable(head(mydata)) %>%
+  kable_styling() %>% add_header_above(c("Variables" = 7)) %>% kable_styling(fixed_thead = T)
+```
+Table 3 above displays the various variables included in the best model determined by forward and backwards selection. As mentioned earlier, both of these methods resulted in the same best model for each neighbourhood group; also it is evident from the table that the Full Model is the same as the stepwise models for the sub-datasets of Bronx and Manhattan as all the variables are included. From this chart, it can easily be seen which variables are included in the best stepwise model of each neighbourhood group. 
+
+After our investigation of these questions, we found that some of our expectations were met and some results surprised us. Before our research, we did not have any major idea of which variables would be included in a model. We expected that lasso would find the best model for the overall city. This is because lasso offers an advantage over stepwise for predicting generalized data. Where we were surprised, however, was by the fact that there were neighborhood groups where the best model was selected by stepwise rather than lasso. Lasso is often understood to be a better tool for regression, as stepwise methods are highly dependent upon sample characteristics; predictors can often be correlated and stepwise methods struggle to deal with that. 
+
+# CONCLUSION
+
+  We started our research and analysis to identify trends such as any cluster patterns or relationships between price and various other factors within Airbnb listings of the neighbourhoods of New York City. We employed several methods of model selection and have concluded that lasso yielded the best model for the overall city, but each neighbourhood yielded a unique model using different methods. We have also found models to predict the price of an Airbnb listing in each of the 5 neighbourhoods in New York City. Lasso was expected to be the best model, in general, to use for all the situations; however, this was not the case as three of the five neighbourhoods obtained a smaller RMSE with the stepwise model.    
+
+We did not use the elastic net regression in this project, which could have possibly overcome the limitations of the ridge and lasso methods to produce a unique solution while maintaining the proportional shrinkage of ridge regression. It could combine important components such as elimination from the lasso model and coefficient reduction from the ridge model to improve the model’s predictions overall. Some data that could have potentially improved our model would have been having access to the review score of each listing. Also it would have been interesting to see if whether a host was rated as a super host had any influence on the price of their listing. Super hosts are known to have their listings booked more often as their average review rating is higher than a regular host.
+          
+These results are useful to people traveling to New York City as they indicate general models to predict prices in one of the largest tourist destinations in the United States. These results show that the neighbourhood in which a person decides to stay in can influence the factors that are used to estimate the price of their Airbnb. It also shows that for various neighbourhoods different components have more influence on price than the other neighbourhoods. This can be useful for both tourists and Airbnb listers. For tourists, they can use predictive models to see whether the listing they’re going after is a good deal or a bad deal. Listers can use these results to competitively adjust their prices. 
+          
+In the future, the methods employed in this project could be applied to worldwide Airbnb data. If we adjusted our models to not include variables specific to New York City, such as neighborhood_group, we could also use apply our models to Airbnb data of other cities and see how well our models predict the price in other cities. This would be interesting to further analyze as various large cities may have differing factors that contribute to predicting price. Continued analysis could also lead to information regarding how different geographical locations place more emphasis on certain factors than others due to their climate.   
+
