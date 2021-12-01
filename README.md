@@ -32,7 +32,17 @@ The answer key includes the correct answer for each of the questions-I got the d
 
 ---College---
 
+STOR 320:
+Analysis 1-4: 
+These homeworks involved Data Transformation, Exploratory Data Analysis, Tidying Data, Web Scraping, Joining Data, General Programming and Modeling
+
+The final project was a data exploratory assignment that involved finding a dataset (>100,000 entries) online, cleaning it, proposing 2 questions relavent to the dataset and answering them. The questions for my final project were the following: 
+1) Which combination of variables creates the best model to most reliably predict price?
+2) Which combination of variables, based on the dataset of each specific neighborhood group, can be used to create the best model to most reliably predict price?
+
+
 STOR 590
 Hwk 1-6:
 These homeworks invovled created various types of models linear models, explaining unexpected outcomes and using ggplot to create graphs to illustrate trends
+
 Topics: Binary response models, generalized linear models: general theory and methods, Binomial and proportion models, Count regression, Contingency tables: two-way, three-way, matched pairs, ordinal variables, and Other GLMs: gamma, inverse gaus
