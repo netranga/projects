@@ -1,0 +1,132 @@
+---
+title: "STOR 590 Hwk 6"
+author: "Netra"
+date: "10/12/2020"
+output: html_document
+---
+Faraway, Chapter 10
+Problems 2 and 3, page 233
+
+Exercise 2
+
+a)
+```{r}
+library(ggplot2)
+library(faraway)
+data("coagulation")
+ggplot(coagulation, aes(x = diet, y = coag)) + geom_point()
+
+```
+Based on the plot, diets B and C have higher blood coagulation times compared to diets A and D which have lower blood coagulation times. 
+
+b)
+```{r}
+mod1 <- aov(coag ~ diet, coagulation)
+summary(mod1)
+predict(mod1, newdata = data.frame(diet = "D"), interval = "predict")
+```
+The 95% prediction interval for the response of a new animal assigned to diet D is (55.76427, 66.23573).
+
+
+c)
+```{r}
+library(lme4)
+MatrixMod <- lmer(coag ~ 1 + (1|diet), coagulation)
+summary(MatrixMod)
+predict(MatrixMod, newdata=data.frame(diet="D"))
+```
+```{r}
+group.sd <- as.data.frame(VarCorr(MatrixMod))$sdcor[1]
+resid.sd <- as.data.frame(VarCorr(MatrixMod))$sdcor[2]
+pv <- numeric(1000)
+for(i in 1:1000){
+y <- unlist(simulate(MatrixMod))
+bmod <- refit(MatrixMod, y)
+pv[i] <- predict(bmod, newdata=data.frame(diet="D")) + rnorm(n=1,sd=resid.sd)
+}
+quantile(pv, c(0.025, 0.975))
+```
+The blood coagulation time for the new animal assigned to diet D was 61.17017 and the 95% prediction interval is (55.49324 and 72.66584).
+
+d)
+```{r}
+predict(MatrixMod, re.form=~0)[1]
+pv <- numeric(1000)
+for(i in 1:1000){
+y <- unlist(simulate(MatrixMod))
+bmod <- refit(MatrixMod, y)
+pv[i] <- predict(bmod, re.form=~0)[1] + rnorm(n=1,sd=group.sd) + rnorm(n=1,sd=resid.sd)
+}
+
+quantile(pv, c(0.025, 0.975))
+```
+The blood coagulation time for this animal is 64.01266 and the 95% prediction interval is (55.69249, 73.05675).
+
+e)
+```{r}
+predict(MatrixMod, re.form=~0)[1]
+pv <- numeric(1000)
+for(i in 1:1000){
+y <- unlist(simulate(MatrixMod))
+bmod <- refit(MatrixMod, y)
+pv[i] <- predict(bmod, re.form=~0)[1] + rnorm(n=1,sd=group.sd) 
+}
+quantile(pv, c(0.025, 0.975))
+```
+The blood coagulation time for this animal is 64.01266 and the 95% prediction interval is (56.83937, 71.73676).
+
+Exercise 3
+a)
+```{r}
+data("eggprod")
+ggplot(eggprod, aes(treat, eggs, shape = block)) + geom_point()
+ggplot(eggprod, aes(block, eggs, shape = treat)) + geom_point()
+```
+For the block vs eggs plot, block 1 and 2 both had decreasing number of eggs produced from treatment E to O. Block 3 number of eggs produced increased from treatment E to F but then decreased from treatment F to O. Block 4 number of eggs produced decreased from treatment E to treatment F but then increased from treatment F to O.
+
+For the treatment vs eggs plot, Treatment O results in the loweest number of eggs produced. Treatment E has varying level of egg amounts and Treatment E had the most consistent amount of eggs procuded, which was higher than Treatment O. 
+
+b)
+```{r}
+mod1 <- aov(eggs ~ treat + block, eggprod)
+summary(mod1)
+plot(residuals(mod1) ~ fitted(mod1), xlab = "Fitted Values", ylab = "Residuals")
+abline(h = 0)
+```
+The predictor that is significant at the 5% level is treat as it has a p-value of 0.0449 whereas block has a 0.2145 p-value- hence why the predictor is not significant. After performing a basic diagnostic check, I came to the conclusion that there were no issues in the model.
+
+
+c)
+```{r}
+FEmod <- lmer(eggs ~ treat + (1|block), eggprod)
+summary(FEmod)
+```
+The reatment that is best in terms of maximizing production according to the model is treatment E. I am not sure it is better than treatment F (I am sure it is better than treatment O though) because the diference in the coefficients of treatment E and treatmentF are pretty small. 
+
+d)
+```{r}
+library(pbkrtest) #214 from textbook
+modp1 <- lmer(eggs ~ treat + (1|block), eggprod, REML=FALSE)
+modp2 <- lmer(eggs ~ 1 + (1|block), eggprod, REML=FALSE)
+KRmodcomp(modp1, modp2)
+```
+Based on the Kenward-Roger approximation for an F-test, the p-value of F-test was smaller than 0.05 meaning the treat variable is indeed significant. This result further confirms the conclusion drawn from the fixed effects result that also states the treat variable is a significant predictor.
+
+e)
+```{r}
+set.seed(590)
+pmod <- PBmodcomp(modp1, modp2)
+summary(pmod)
+```
+(e) Perform the same test but using a bootstrap method. How do the results com-
+pare?
+
+Using the bootstrap method, the p-value of the PBtest is greater than 0.05, meaning that the treat predictor is not significant. This result compared to the previous parts, is not the same as in the other models the treat predictor was deemed significant.
+
+f)
+```{r}
+library(RLRsim)
+exactRLRT(FEmod)
+```
+The outcome does agree with the fixed effects result that block is not a significant predictor-the p-value is greater than 0.05. 
+

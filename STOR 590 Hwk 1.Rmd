@@ -1,0 +1,56 @@
+---
+title: "STOR 590 Assignment"
+author: "Netra"
+date: "8/17/2020"
+output: html_document
+---
+1. 
+```{r}
+library(readr)
+PropSet <- ProportionNotReturned <- read_csv("Downloads/ProportionNotReturned.csv")
+weightsO <- rep(1,100)
+weightsO[c(9,78)] <- c(0,0)
+Model1 <- lm(PNR~ Pop + Rural + MedAge + Travel + Hsgrad + Collgrad + MedInc + Black + Hisp, data = PropSet, weights = weightsO )
+step(Model1, trace = FALSE)
+```
+I used the stepwise regression method to determine the optimal model to predict PNR. Using stepwise regression, the best model includes the following 3 variables to predict PNR: Pop, Hsgrad and Black. 
+
+```{r}
+lmBest <- lm(PNR~Pop + Hsgrad + Black, data = PropSet, weights = weightsO)
+plot(lmBest)
+```
+The following plots are used to assess measures of how well the model fits such as if the residuals are normally distributed. From the plots it can be seen that majority of the residuals are normally distributed. Nothing from the plots implies that it is not a good fit, however, there are some outliers and a bit of skewness in the plots. In the Q-Q plot specfically, the ends of the line were skewing from the plot line marginally and there are outlines at the lower and upper ends. 
+
+2.
+```{r}
+PI <- predict(lmBest, se.fit = T, interval = 'prediction', level = 0.99, weights = 1)
+PI$fit[c(9,78),]
+```
+The 99% prediction interval for the PNR of Bladen counties is [0.0005795402, 0.03399106] and for Robeson counties it is [-0.0013119958, 0.03241816]
+
+3.
+```{r}
+PropSet$PNR[9] - 0.03399106
+```
+
+```{r}
+PropSet$PNR[78] - 0.03241816
+```
+The excess PNR for Bladen and Robeson counties are 0.07910894 and 0.07758184 respectively, that cannot be explain by natural variability.
+
+
+4.
+```{r}
+8110*(PropSet$PNR[9] -0.03399106 )
+```
+
+```{r}
+16069*(PropSet$PNR[78] - 0.03241816)
+```
+Using the numbers of absentee ballots requested in Bladen and Robeson counties (8,110 and 16,069), the estimated total number of absentee ballots that were unaccounted for in Bladen and Robeson counties are 641.5735 and 1246.663 respectively.
+
+5.
+```{r}
+8110*(PropSet$PNR[9] -0.03399106 ) + 16069*(PropSet$PNR[78] - 0.03241816)
+```
+The number of missing votes in Bladen and Robeson countries are greater than 905, it is 1888.236, therefore the conclusion is not supported by the analysis.

@@ -1,0 +1,135 @@
+---
+title: "STOR 590 Hwk 5"
+author: "Netra"
+date: "10/4/2020"
+output: html_document
+---
+
+Page 126 Question 2 & Page 128 Question 10
+
+
+a)
+```{r}
+library(faraway)
+data ("melanoma")
+(two_table <- xtabs(count ~ tumor + site, melanoma))
+mosaicplot(two_table, color = TRUE, main = NULL, las = 1)
+```
+Based on the mosaic plot, there is overlap between site and tumor indicating that there is dependence between the two variables. 
+
+b)
+```{r}
+summary(two_table)
+```
+The p-value is extremely small indicating that the variables site and tumor are not independent.
+
+c)
+```{r}
+glmMod <- glm(count~tumor+site, family = poisson, melanoma)
+summary(glmMod)
+pchisq(deviance(glmMod),df.residual(glmMod),lower=F)
+```
+After calculating the p-value, it is clear that site and tumor are dependent.
+
+d)
+```{r}
+xtabs(residuals(glmMod) ~ tumor + site, melanoma )
+```
+The larger residuals are the values -2.315, 5.135, -3.045 and -2.82. The large residuals are indicative of strong positive or negative associations (based on whether is residual is positive or negative). The groups of extremeity + freckle had the -2.315 residual, the groups of head + feckle had the 5.135 residual, the groups of head + superficial had -3.045 resdiaul and the groups of trunk + freckle had the -2.828 residual.
+
+f)
+```{r}
+melanomaOmit <- melanoma[melanoma$site != "head",]
+glmMod2 <- glm(count ~ site + tumor, family = poisson, melanomaOmit)
+summary(glmMod2)
+pchisq(deviance(glmMod2),df.residual(glmMod2),lower=F)
+```
+Based on the 0.5389 p-value, this indicates that the varaibles site and tumor type are indeed independent.
+
+Exercise 10
+
+(a) Show that this provides an example of Simpson’s paradox.
+```{r}
+library(faraway)
+data("UCBAdmissions")
+#first show analysis combining all frequencies
+(ct = xtabs(Freq~Gender+Admit, UCBAdmissions))
+prop.table(ct, 1)
+summary(ct)
+```
+```{r}
+# now check just for one department 
+(cta=xtabs(Freq~Gender+Admit, UCBAdmissions,subset=(Dept=='A')))
+prop.table(cta,1)
+(cta1=xtabs(Freq~Gender+Admit, UCBAdmissions,subset=(Dept=='B'))) #Dept B
+prop.table(cta1,1)
+(cta2=xtabs(Freq~Gender+Admit, UCBAdmissions,subset=(Dept=='C')))
+prop.table(cta2,1)
+(cta3=xtabs(Freq~Gender+Admit, UCBAdmissions,subset=(Dept=='D')))
+prop.table(cta3,1)
+(cta4=xtabs(Freq~Gender+Admit, UCBAdmissions,subset=(Dept=='E')))
+prop.table(cta4,1)
+(cta5=xtabs(Freq~Gender+Admit, UCBAdmissions,subset=(Dept=='F')))
+prop.table(cta5,1)
+```
+```{r}
+fisher.test(cta)
+fisher.test(cta1)
+fisher.test(cta2)
+fisher.test(cta3)
+fisher.test(cta4)
+fisher.test(cta5)
+```
+Based on this analysis, it is a clear example of Simpsons paradox. Whne looking at the mariginal association (the dataset as a whole) it seems to appear that the admissions are seen to favor males over females with the female admittance at 30.3% and the female admittance at 44.5% and the female rejection at 69.64% and male rejection at 55.48%. However, upon further analysis of each department (conditional association), the exact opposite is seen: females are favored over males. But, since the p-values of the Fisher's tests are large, it can be concluded that the observed differences in admittance based on an individual being male or female is not statistically significant. 
+
+
+(b) Determine the most appropriate dependence model between the variables.
+```{r}
+# Model 1
+modI = glm(Freq ~ Gender + Admit + Dept, UCBAdmissions, family=poisson)
+c(deviance(modI),df.residual(modI),pchisq(deviance(modI),df.residual(modI),lower=F))
+```
+```{r}
+# Model 2
+modJI = glm(Freq ~ Gender*Admit + Dept, UCBAdmissions, family=poisson)
+c(deviance(modJI),df.residual(modJI),pchisq(deviance(modJI),df.residual(modJI),lower=F))
+```
+```{r}
+# Model 3
+
+modC=glm(Freq~Gender*Dept + Dept*Admit,UCBAdmissions,family=poisson)
+c(deviance(modC),df.residual(modC),pchisq(deviance(modC),df.residual(modC),lower=F))
+
+```
+```{r}
+# Model 4
+modU=glm(Freq~(Gender+Dept+Admit)^2,UCBAdmissions,family=poisson)
+c(deviance(modU),df.residual(modU),pchisq(deviance(modU),df.residual(modU),lower=F))
+```
+
+```{r}
+#Model 5
+modI3=glm(Freq~Gender*Dept*Admit,UCBAdmissions,family=poisson)
+c(deviance(modI3),df.residual(modI3),pchisq(deviance(modI3),df.residual(modI3),lower=F))
+```
+
+```{r}
+anova(modC, modU, test = 'Chi')
+anova(modU, modI3, test = 'Chi')
+```
+I compared models 3 and 4 since the deviance values were very close I felt that it would be best to run an anova test to see which was better. Since the p-value was high, it indicates that model 3 is better than 4. Then I compared model 3 and 5 to see between the two which was the best. Based on the extremely small p-value, I concluded that model 5 was the best model. This would make sense as model 5 is the satured model including all possible interactions among the variables. It should be noted that model 5 has 0 degrees of freedom and therefore can't be applicable to real world scenarios in a partical sense so therefore, model 3 would theoretically be the best dependence model for our purpose and includes Gender*Dept and Dept*Admit interactions and has 6 degrees of freedom. 
+
+(c) 
+```{r}
+#convert to data frame from 3 way table
+library(dplyr)
+UCBAdmissionsN <- as.data.frame(UCBAdmissions)
+UCBAdmit <- arrange(UCBAdmissionsN, Admit)
+freqbin <- matrix(UCBAdmit$Freq, ncol = 2)
+glmBin <- glm(freqbin ~ Gender*Dept, family=binomial, UCBAdmit[1:12,])
+drop1(glmBin, test = "Chisq")
+
+```
+The small p-value from the binomial regression indicates that the interaction between Gender and Department for predicting admissions status is indeed significant. This further confirms from the previous question that the interaction between these two variables is significant as it is included in Model 3 which would be the most appropriate dependence model.
+
+

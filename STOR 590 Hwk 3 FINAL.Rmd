@@ -1,0 +1,211 @@
+---
+title: "STOR 590 HWK 3"
+author: "Netra"
+date: "9/9/2020"
+output: html_document
+---
+
+
+```{r}
+library(faraway)
+library(ggplot2)
+data(pima)
+str(pima)
+```
+
+a)
+```{r}
+pima$test <- factor(pima$test)
+summary(pima$test)
+levels(pima$test) <- c("negative","positive")
+summary(pima)
+library(ggplot2)
+ggplot(pima, aes(x=insulin, color=test)) + geom_histogram(position="dodge", binwidth=20, fill = "gray")
+```
+Something unbelievable I noticed from the histogram is the high count of of insulin level being at 0. This doesn't seem believable as the National Institute of Diabetes and Digestive and Kidney Diseases is conducting a study on 768 adult females that have diabetes, therefore the insulin level couldn't be at 0.
+
+b)
+```{r}
+pima$insulinNA <- pima$insulin
+pima$insulinNA[pima$insulin == 0] <- NA
+summary(pima$insulinNA)
+ggplot(pima, aes(x=insulinNA, color=test)) + geom_histogram(position="dodge", binwidth=20, fill = "gray")
+```
+The distribution is still skewed to the right however, the scale is alot smaller. In the previous histogram the count would go past 200 but in this histogram it goes up until a little under 40. 
+
+c)
+```{r}
+pima$glucoseN <- pima$glucose
+pima$glucoseN[pima$glucose==0] <- NA
+
+pima$tricepsN <- pima$triceps
+pima$tricepsN[pima$triceps==0] <- NA
+
+pima$diastolicN <- pima$diastolic
+pima$diastolicN[pima$diastolic==0] <- NA
+
+pima$bmiN <- pima$bmi
+pima$bmiN[pima$bmi==0] <- NA
+
+summary(pima)
+
+modelNA <- glm(test ~ pregnant + glucoseN + diastolicN + tricepsN + insulinNA + bmiN + diabetes + age, family=binomial, pima)
+summary(modelNA)
+```
+```{r}
+nobs(modelNA)
+dim(pima)[1]
+```
+There is a total of 768 values in the entire dataset however the model only fitted 336 values. This is because all the NA values were left out while fitting the model.
+
+d)
+```{r}
+modelIT <- glm(test ~ pregnant + glucoseN + diastolicN +
+               bmiN + diabetes + age, family=binomial, pima)
+nobs(modelIT)
+pimaNA <- na.omit(pima)
+dim(pimaNA)
+
+modelNA1 <- glm(test ~ pregnant + glucoseN + diastolicN + tricepsN + insulinNA + 
+               bmiN + diabetes + age, family=binomial, pimaNA)
+
+modelNA2 <- glm(test ~ pregnant + glucoseN + diastolicN + 
+               bmiN + diabetes + age, family=binomial, pimaNA)
+
+# anova F-test
+anova(modelNA1, modelNA2, test='Chi')
+```
+I used an anova F-test to compare this model with the one in part c. Based on the hypothesis test, the p-value is greater than 0.05 therefore we can reject the alternative hypothesis and state that insulin and triceps are not significant predictors on the test the indicates whether the patient shows signs of diabetes. 
+
+e)
+```{r}
+step_model <- step(modelNA1, trace=FALSE)
+summary(step_model)
+nobs(step_model)
+```
+Using stepwise model selection, the following predictors are considered significant based on p-value: glucose, bmi, diabetes and age. Pregnant was another variable included in the model. The number of cases used in the selected model were 392.
+
+f)
+```{r}
+pima$missingValue <- apply(pima,1,anyNA)
+xtabs(~test+missingValue,pima)
+modelMissingValues <- glm(test~missingValue, family=binomial,pima) 
+summary(modelMissingValues)
+
+anova(modelMissingValues,test="Chi")
+```
+In this step I created a variable, missingValue that accounts for if a case has a missing value. Using this variable in the model, I conducted an anova Chi-square hypothesis test. Based on our hypothesis test, the p-value is greater than 0.05, indicating that the alternative hypothesis can be rejected. Therefore the conclusion is drawn that the missingValue variable is not a significant predictor of whether the patient shows signs of diabetes.
+
+f continued
+```{r}
+modelRF <- glm(test ~ pregnant + glucoseN + bmiN + diabetes + age, family=binomial, pimaNA)
+summary(modelRF)
+```
+We can use model by omitting all missing NA values since missingValue does not have an effect on the response variable. After I conducted a test and evaluated that the missingValue variable does, it made sense to to use the edited dataset, pimaNA, that we created before that does not include any missing values. We then refit the model and arrived at the same conclusion in part E to double check and confirm that we are certain that excluding the missing values was appropriate.
+
+
+g)
+```{r}
+summary(pimaNA$bmiN)
+```
+First quartlie is 28.40 and third quartlie is 37.1
+```{r}
+(bmiFit = coefficients(modelRF)["bmiN"])
+
+```
+```{r}
+est1q = 28.40 * bmiFit
+est3q = 37.1 * bmiFit
+
+(diffodds = est1q - est3q)
+
+(exp(diffodds))
+```
+
+```{r}
+(confidencebmi = confint(modelRF, 'bmiN'))
+
+(OR = (exp(confidencebmi * (28.40 - 37.1) )))
+(OR / (1 + OR))
+```
+Confidence interval for the difference between the odds of testing positive for diabetes for a woman with a BMI at the first quartlie compared to a women at the third quartile is 26.06% to 41.65%. This means that the odds of showing signs of diabetes for a woman with a BMI in the 1st quartlie is 26-41% less than a woman with a BMI in the third quartile. 
+
+
+```{r}
+
+pos_dm <- subset(pimaNA, pimaNA$test == "positive")
+neg_dm <- subset(pimaNA, pimaNA$test == "negative")
+
+par(mfrow=c(1,2))
+boxplot(pos_dm$diastolic, main="Positive for DM")
+boxplot(neg_dm$diastolic, main="Negative for DM")
+pos_dm <- subset(pimaNA, pimaNA$test == "positive")
+neg_dm <- subset(pimaNA, pimaNA$test == "negative")
+
+summary(pos_dm)
+```
+Based on the boxplot, it can not be confirmed that women who test positive have higher diastolic blood pressure. Both the positive and negative individual have a similar spread in diastolic BP. The diastolic blood pressure is significant in the regression model as it has a positive correlation with other variables like glucose. 
+
+4. 
+
+a)
+```{r}
+data(nodal, package = "boot")
+help(nodal, package = "boot")
+nodal$m <- NULL
+image(as.matrix(nodal))
+```
+The plot can be improved by ordering the cases on the response and labeling the X axis. There is no need to label the Y axis because the index of nodal will not be in increasing order after the changes are made.
+
+```{r}
+image(as.matrix(nodal), xaxt = "n", yaxt = "n")
+axis(2, at=seq(0,1, length.out = ncol(nodal)), labels = colnames(nodal), las = 2)
+```
+
+```{r}
+mod1 <- glm(r ~., family = binomial,data = nodal)
+summary(mod1)
+1-pchisq(18.31,5)
+```
+Since the p-value is smaller than 0.05, there is evidence that at least some of the five predictors are related to the response.
+
+
+```{r}
+mod2 <- glm(r ~ stage + xray + acid, family = binomial, data= nodal)
+anova(mod1, mod2, test = "Chi")
+```
+Based on the anova chisquared test, age and grade are not significant predictors in the model. The smaller model can be used in prefrence to the larger model based on these findings. 
+
+```{r}
+exp(mod2$coefficients[3]*1) - 1
+exp(confint(mod2)[3,]*1) - 1
+```
+Having a serious x-ray results the odds of nodal involvement compared to a nenserious result by 5.76. The 95% confidence interval for the odds is (0.5796, 34.4906). 
+
+```{r}
+mod3 <- glm(r ~ .*., family = binomial, data = nodal)
+summary(mod3)
+```
+The followin gmodel with all the predictors and their two-way interactions has large standard error coefficient values. This is due to multicollinearity as some of the predictors influence one another and have high inter-associations within each other. 
+
+```{r}
+library(brglm)
+BiasMod <- brglm(r ~ .*., family = binomial, data = nodal)
+summary(BiasMod)
+```
+The largest interaction is between stage and grade with a value of -2.8219. 
+
+```{r}
+BP <- predict(BiasMod, type="response")
+library(dplyr)
+nodal <- mutate(nodal, predBP=ifelse(BP>0.5, 1, 0))
+sum(nodal$r != nodal$predBP)
+mean(nodal$r != nodal$predBP)
+```
+```{r}
+BP1 <- predict(mod1, type="response")
+nodal <- mutate(nodal, predBP1=ifelse(BP1>0.5, 1, 0))
+sum(nodal$r != nodal$predBP1)
+mean(nodal$r != nodal$predBP1)
+```
+This estimates are not too accurate because we did not calculate the values with cross-validation.

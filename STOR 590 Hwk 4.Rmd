@@ -1,0 +1,190 @@
+---
+title: "STOR 590 Hwk 4"
+author: "Netra"
+date: "9/13/2020"
+output: html_document
+---
+
+4.Consider the Galápagos data and model analyzed in this chapter. The purpose of this question is to reproduce the details of the GLM fitting of this data.
+
+
+a)
+```{r}
+library(faraway)
+data("gala")
+glmMod <- glm(Species ~ Area + Elevation + Nearest + Scruz + Adjacent, family = poisson, gala)
+coef(glmMod)
+deviance(glmMod)
+```
+The following are the coefficient values 
+(Intercept)          Area     Elevation       Nearest         Scruz      Adjacent 
+ 3.1548078779 -0.0005799429  0.0035405940  0.0088255719 -0.0057094223 -0.0006630311 
+ and the deviance is 716.8458.
+
+
+(b) For a Poisson GLM, derive η, dη/dμ, V(μ) and the weights to be used in an iteratively fit GLM. What is the form of the adjusted dependent variable here?
+n = log(u)
+dn/du = l/u
+V(u) = u
+weights are equal to u
+z = ((y-u)/u) + n
+The form of the adjusted dependent variable is z = ((y-u)/u) + n.
+
+(c) Using the observed response as initial values, compute the first stage of the iteration, stopping after the first linear model fit. Compare the coefficients of
+this linear model to those found in the GLM fit. How close are they?
+```{r}
+y <- gala$Species
+mu <- y
+eta <- log(mu)
+z <- eta + (y - mu) / mu
+w <- mu
+Lmod <- lm (z ~ Area + Elevation + Nearest + Scruz + Adjacent, weights = w, gala )
+coef(Lmod)
+```
+The coefficients of this linear model are pretty similar to those in the GLM fit. For example, the intercept of the linear model is 3.5191 and for the GLM model the intercept is 3.1548. The difference between these values 0.3643 which is a small difference. 
+
+
+(d) Continue the iteration to get the next η and μ. Use this to compute the current
+value of the deviance. How close is this to the deviance from the GLM?
+```{r}
+eta <- Lmod$fitted 
+mu <- exp(eta)
+current_deviance <- 2 * sum(y*log(y/mu)-(y - mu))
+current_deviance
+```
+The deviance of the GLM is 716.8458 and the current value of the deviance is 828.0096. Therefore the difference in the deviance values is 111.16.
+
+
+(e) Compute one more iteration of the GLM fit, reporting the next calculation of the coefficients and deviance. How close are these to target now?
+
+```{r}
+z <- eta + (y - mu) / mu
+w <- mu
+Lmod1 <- lm(z ~ Area + Elevation + Nearest + Scruz + Adjacent, weights = w, gala)
+coef(Lmod1)
+
+eta <- Lmod1$fitted
+mu <- exp(eta)
+deviance2 <- 2 * sum(y*log(y/mu)-(y - mu))
+deviance2
+```
+The new deviance of 719.4158 is extremely close to 716.8458 in comparison to the first iteration with a deviance of 828.0096.
+
+(f) Repeat these iterations  a few more times,computing the deviance in each time. Stop when the deviance does not change much. Compare your final estimated coefficients to that produced by the GLM fit.
+
+```{r}
+while (abs(deviance2 - current_deviance) > 1e-9) {
+  current_deviance <- deviance2
+  z <- eta + (y - mu) / mu
+  w <- mu
+  Mod2 <- lm(z ~ Area + Elevation + Nearest + Scruz + Adjacent, weights = w, gala )
+  eta <- Mod2$fitted
+  mu <- exp(eta)
+  deviance3 <- 2 * sum(y * log (y/mu) - (y - mu))
+}
+coef(Mod2)
+```
+(Intercept)          Area     Elevation 
+ 3.1548078779 -0.0005799429  0.0035405940 
+      Nearest         Scruz      Adjacent 
+ 0.0088255719 -0.0057094223 -0.0006630311
+are the values from the GLM fit and in comparison to the values above from the last iteration. The values are within a 0.001 difference therefore the final estimated coefficients are very very close to that produced by the GLM fit, essentially a perfect fit.
+ 
+(g) Use your final iterated linear model fit to produce standard errors for the coefficients. How close are these to that produced by the direct GLM fit?
+```{r}
+summary(Mod2)$coef[,2]/ summary(Mod2)$sigma
+```
+```{r}
+summary(glmMod)$coef[,2]
+```
+The standard errors are almost the same to those produced by the direct GLM fit.
+
+Exercise 6
+The worldcup data were collected at the 2010 World Cup. We are interested in modeling the number of shots taken by each player. As goalkeepers do not nor- mally shoot, you should remove them from the dataset. Due to substitution and varying success in the tournament, the number of minutes played by each player is quite variable. For this reason, compute new variables that represent the number of tackles and passes made per 90-minute game.
+```{r}
+library(faraway)
+data("worldcup")
+worldcupNoGP <- worldcup[worldcup$Position != "Goalkeeper",]
+worldcupNoGP$Tackles90 <- worldcupNoGP$Tackles / worldcupNoGP$Time * 90
+worldcupNoGP$Passes90 <- worldcupNoGP$Passes / worldcupNoGP$Time * 90
+```
+
+
+a)
+```{r}
+glmMod <- glm(Shots ~ offset(log(Time)) + Team + Position + Tackles90 + Passes90,
+family = poisson, worldcupNoGP)
+coef(glmMod)[c("Tackles90", "Passes90")]
+```
+The effect of tackles on shots is a negative relationship (-0.087) and the effect of tackles on passes is a positive relationship (0.0079).
+
+
+b)
+```{r}
+leverage_values <- influence(glmMod)$hat
+worldcupNoGP[which.max(leverage_values),]
+halfnorm(leverage_values)
+```
+The player with the highest leverage is Villa and I think this because Spain won the 2010 World Cup and Villa was one of Spain's starters who scored alot. Based on the plot, there seems to be no exceptional leverage.
+
+
+c)
+```{r}
+RCF <- influence(glmMod)$coef
+worldcupNoGP[which.max(abs(RCF[, "Tackles90"])), ]
+halfnorm(abs(RCF[,"Tackles90"]))
+```
+The player that caused the greatest absolute change in the tackle coefficient was Mascherano. What was unusual about this was that he did not make any shots during the 2010 World Cup. After plotting the tackle coefficients I determined that none of the values were particularly large. 
+
+d)
+```{r}
+CookStat <- cooks.distance(glmMod)
+worldcupNoGP[which.max(CookStat), ]
+```
+The player with the largest Cook statistic was Dempsey. What was unusual about Dempsey was that he was on outlier as he was one of the top 10 players with highest number of shots but one of the lower amount of play times. 
+
+e)
+```{r}
+jackknife_residuals <-rstudent(glmMod)
+worldcupNoGP[which.max(abs(jackknife_residuals)),]
+```
+The player with the largest absolute jacknife residual was GonzalezC. The jackknife residuals represent the difference between the observed and predicted values.
+How did he come to be the largest?
+
+f)
+```{r}
+plot(residuals(glmMod) ~ predict(glmMod, type = "link"))
+```
+The source of the lines of points appearing on the plot are based on the variable shots. Typically most players had shots within the 0-9 range as those were the most common # of hosts players made, that is the reason why the points fall into these curved line patterns. This plot also indicates that the variance is not constant across observations. It can be seen that some values are starting to skew from the straight line pattern.
+
+g)
+```{r}
+#raw shots against tackles
+plot(Shots ~ Tackles, worldcupNoGP)
+#shots per game vs tackles per game
+worldcupNoGP$Shots90 <- worldcupNoGP$Shots / worldcupNoGP$Time * 90
+plot(Shots90 ~ Tackles90, worldcupNoGP)
+#linearized plot
+mu <- predict(glmMod, type = "response")
+z <- predict(glmMod) + (worldcupNoGP$Shots - mu) / mu
+plot(z ~ Tackles90, worldcupNoGP)
+```
+The first plot shows the relationship between number of shots and tackles by each player. There are many values that fall between the 0-5 range of tackles and shots. The second plot shows the number of shots and tackles per game so most values are decimal values as the number of shots or tackles is divided by the time and multipled by 90. The values are continous in this plot whereas in the first plot they were discrete as only whole number values were taken on by observations. The third plot shows the linearized response against tackles per game. This plot is the best one for discovering the relationship between the predictor and response as it shows a linear relationship unlike the other two plots where there appears to be no trends. The third plot allows us to see the primarily negative relationship between the predictor and response which makes sense as tackles per game had a negative coefficient as can be seen in part a.  
+
+h)
+
+```{r}
+mu <- predict(glmMod, type = "response")
+u <- (worldcupNoGP$Shots - mu) / mu + coef(glmMod)["Tackles90"] * worldcupNoGP$Tackles90
+plot(u ~ Tackles90, worldcupNoGP, ylab = "Partial Residual")
+abline(0, coef(glmMod)["Tackles90"])
+```
+Based on the partial residual plot for tackles, it can be concluded that there is a negative relationship between shots and tackles per game. The point to the far right isn't really influential as it is pretty close to the line. 
+
+
+i)
+```{r}
+linearized_response <- predict(glmMod) + (worldcupNoGP$Shots - mu) / mu
+plot(linearized_response ~ predict(glmMod))
+```
+

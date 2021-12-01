@@ -1,0 +1,134 @@
+---
+title: "STOR 590 Hwk 2"
+author: "Netra"
+date: "8/25/2020"
+output: html_document
+---
+
+• An initial data analysis that explores the numerical and graphical characteristics of the data.
+• Variable selection to choose the best model.
+• An exploration of transformations to improve the fit of the model.
+• Diagnostics to check the assumptions of your model.
+• Some predictions of future observations for interesting values of the predictors.
+• An interpretation of the meaning of the model with respect to the particular area of application.
+
+1.
+
+
+```{r}
+data(rock)
+head(rock) #shows first 5 values
+summary(rock) #summary statistics
+str(rock) #types of variables and values of each
+hist(rock$perm) #histogram shows right skew
+boxplot(rock$perm)
+mod1 = lm(perm~area+peri+shape, data=rock)
+summary(mod1)
+plot(mod1)
+
+
+```
+For the initial data analysis, I looked at the histogram and boxplot of the perm variable. It is clear that the histogram and boxplot are heavily skewed to the right. Each of the 4 plots show that the residuals are not normally distributed. There are 3 primary outliers (observations 38, 42, 48) that are evident from the plots and the points on the QQ plot do not fall a linear pattern. The model therefore shows some transformations methods are needed improve the model. 
+
+
+```{r}
+library(MASS)
+boxcox(mod1, lambda = seq(0.15, 0.4, by = 0.01))
+```
+I decided to apply the boxcox transformation to the data as it raises all the variables to a power of lambda and indicates what lambda value is best which is 0.215
+
+```{r}
+rock_bx <- rock
+rock_bx$perm <- (rock$perm^0.215 - 1) / (0.215)
+hist(rock_bx$perm)
+```
+From the histogram we can see the boxcox transformation reduced the significant right skew. Now best model selection can be conducted.
+
+```{r}
+ModBest <- lm(perm~area+peri+shape, data=rock_bx)
+step(ModBest)
+```
+The following code is the aalculation for stepwise model selection after creating a model with the boxcox transformation applied. Using this model selection, only area and peri are the two variables in the best model for predicting permability. 
+
+```{r}
+BestModFinal = lm(perm ~ area + peri, data = rock_bx)
+plot(BestModFinal)
+summary(BestModFinal)
+
+```
+From the plots we can see that the residuals are more normal than the original dataset, however still not the best. The R squared value increased from 0.68 to 0.76 indicating the new model fit is better than the original. We still see that values of observations 42 and 48 are outliers however. Therefore I decided to further investigate the predictions of these values as I consider them two particullary interesing values of the predictors.
+
+```{r}
+OmitSet <- rock_bx[-42]
+ModelOmit <- lm(perm~ area + peri, data = OmitSet)
+predict(ModelOmit, newdata = rock_bx[42,], interval = "prediction", level = 0.95)
+
+OmitSetF2 <- rock_bx[-48]
+ModelOmitF2 <- lm(perm~ area + peri, data = OmitSetF2)
+predict(ModelOmitF2, newdata = rock_bx[48,], interval = "prediction", level = 0.95)
+```
+```{r}
+rock_bx[42,]$perm
+rock_bx[48,]$perm
+help(rock)
+```
+I decided to omit the two outlier values and calculate the 95% confidence interval to see what the range would be without these values as they skew the range. Based on this, observation 42 is not an outlier as the upper bound is 17.53 and the value of the observation is 17.07 and observation 48 is an outlier as the lower bound is 14.207 and the observation is 13.617
+
+The meaning of the model with respect to the particular area of application of rocks is for individuals who want to go into the field of geology and see the relationship on how area and perimeter influence permeability of rocks. Since the rock samples are from a petroleum reservoir, especially particular to this dataset, individuals may look into this dataset to determine when pulling out samples of rock and getting a measure of permeability, if the numbers such as area and perimeter look good, then the individuals will attempt to see if they can dig for oil in that area. 
+
+
+
+2.
+```{r}
+library(faraway)
+data(prostate)
+head(prostate)
+summary(prostate) 
+str(prostate) 
+hist(prostate$lpsa) 
+boxplot(prostate$lpsa)
+hist(prostate$lcp) 
+boxplot(prostate$lcp)
+hist(prostate$pgg45) 
+boxplot(prostate$pgg45)
+modP = lm(lpsa ~ ., data=prostate)
+summary(modP)
+plot(modP)
+
+```
+For the intial data analysis, I looked at the histogram and boxplot of lpsa variable. It is clear that the lpsa values are normally distributed and is not skewed to the left or the right. However, the lcp and pgg45 variables are heavily skewed to the right. Based on the residual plots, the residuals do not seem to be normal; for the QQ plot they do not fall into a linear pattern. Due to skew of the two variables and the low Rsquared value of 0.62, the model does need some transformation for a better fit. 
+
+```{r}
+step(modP)
+```
+Using the stepwise model selection, I obtainted the best model with the following 5 variables: lcavol, lweight, age, lbph and svi. It removed the variables lcp, pgg45 and gleason. Since the two variables with strong right skew were not included in the best model, I decided to not apply the sqrt or log transformations since the other variable values are distributed normally.
+
+```{r}
+bestMod = lm(lpsa ~ lcavol + lweight + age + lbph + svi, data = prostate)
+summary(bestMod)
+plot(bestMod)
+```
+Based on the analysis of the best model produced by stepwise model selection, the R sqaured value barely increased from 0.623 to 0.624. The residuals plots of the model are still not the best. This could mean that the predictor variables may not have the strongest relationship with lpsa, hence the low R-squared value and not the best fitting residuals. We still see that values of observations 39 and 69 are outliers however. Therefore I decided to further investigate the predictions of these values as I consider them two particullary interesing values of the predictors.
+
+
+```{r}
+OmitP <- prostate[-39]
+Mod_OmitP <- lm(lpsa ~ lcavol + lweight + age + lbph + svi, data = OmitP )
+predict(Mod_OmitP, newdata = prostate[39,], interval = "prediction", level = 0.95)
+
+OmitP2 <- prostate[-69]
+Mod_OmitP2 <- lm(lpsa ~ lcavol + lweight + age + lbph + svi, data = OmitP2 )
+predict(Mod_OmitP2, newdata = prostate[69,], interval = "prediction", level = 0.95)
+```
+
+```{r}
+prostate[39,]$lpsa
+prostate[69,]$lpsa
+help(prostate)
+str(prostate)
+```
+I decided to omit the two most evident outlier values and calculated the 95% confidence interval to see what the range would be without these values as the outliers skew the range. Based on this, both outliers do not fall in the 95% confidence interval. Individual 39 had an lpsa value of 2.21375 which is smaller than the lower bound of 2.602579 confirming that this value is an outlier. Individual 69 had an lpsa value of 2.962 which is grater than the upper bound of 2.874 confirming that this value too is an outlier. Doctors can utilize this information to inform their patients of warning levels of gleason score and prostate specific antigen levels they need to look out for to avoid prostate cancer. Also relationships can be drawn to see how cancer volume relates to prostate specific antigens and that can help further research to see if high cancer volumes are correlated with certain antigens. 
+
+The meaning of the model with respect to the particular area of application of prostate would more widely be used by men who want to know how variables such as age, prostate weight, gleason score, hyperlasia amount, etc. can be used to estimate the likelihood that an individual would get prostate cancer. By understanding how 
+
+
