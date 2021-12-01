@@ -1,0 +1,75 @@
+---
+title: "AnalysisCollege"
+author: "Netra"
+date: "7/26/2021"
+output: html_document
+---
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+Set1 <- read_excel("CollegeDataset.xlsx")
+
+```
+
+
+
+```{r}
+library(MASS)
+Set1.1 <- Set1 %>% filter(LEAP_Status != "FN Parent")
+tbl = table(Set1.1$HSE_Pass, Set1.1$LEAP_Status)
+tbl
+chisq.test(tbl)
+
+tbl2 = table(Set1.1$College_Enroll, Set1.1$LEAP_Status)
+tbl2
+chisq.test(tbl2)
+
+
+```
+The chi-square test of independence is used to analyze a frequency table formed by two categorical variables, in this case the Leap Status and whether a student passed the HSE or not (No or Yes). The chi-square test evaluates whether there is a significant association between the categories of the two variables.
+
+The main thing is, we reject the null hypothesis if the p-value that comes out in the result is less than a predetermined significance level, which is 0.05 usually, then we reject the null hypothesis. H0: The two variables are independent.
+H1: The two variables relate to each other. Since the p-value is 0.007244 which is less than 0.05, we reject the null hypothesis and conclude that the two variables are in fact dependent.
+
+
+```{r}
+summary(lm(HSEPass ~ factor(LEAP_Status), data = Set1.1))
+
+summary(lm(CollegeEnroll ~ factor(LEAP_Status), data = Set1.1))
+
+Set1.3 <- Set1 %>% filter(LEAP_Status == "FN Parent")
+
+summary(lm(CollegeEnroll ~ LEAP, data = Set1.3))
+```
+The null hypothesis is there is no difference in the HSE Pass outcome based on the LEAP status. The alternative hypothesis is there is a difference in the HSE Pass outcome based on the LEAP Status. The standard significnace level of 0.05 is used for this statistical test. Since all of the p-values are less than 0.05 (including the intercept), we can reject the null hypothesis and conclude that there is a difference in the HSE Pass outcome based on the LEAP Status.
+
+When you put a factor variable into a regression, you’re allowing a different intercept at every level of the factor as it takes into account the various "levels" of the categorical variable you are analyzing. As you can see the LEAP_Status for those who Completed is missing. This is because this coefficient gets absorbed into the overall Intercept term. Multicolinearity is something to note here as it tends to happen with categorical variables. It occurs when there are high correlations among predictor variables, leading to unreliable and unstable estimates of regression coefficients. However in this scenario, we can not be certain whether or not it had an impact as all of the variables are considered significant but it is important to note. 
+
+```{r}
+sub <- Set1.1 %>% filter(LEAP_Status == "Completed")
+summary(lm(HSEPass~LEAP, data = sub))
+
+sub1 <- Set1.1 %>% filter(LEAP_Status == "Dropped")
+summary(lm(HSEPass~LEAP, data = sub1))
+
+sub2 <- Set1.1 %>% filter(LEAP_Status == "Interested")
+summary(lm(HSEPass~LEAP, data = sub2))
+```
+
+
+```{r}
+Set2 <- Set1 %>% filter(HSEPass == 1) #Passed HSE
+plot1 <- ggplot(data = Set2) + geom_bar(mapping = aes(x = LEAP_Status, fill = LEAP_Status)) + ggtitle("Number of Individuals who Passed HSE based on LEAP Status")
+plot1
+
+Set3 <- Set1 %>% filter(HSEPass == 0) #Didn't Pass HSE
+plot2 <- ggplot(data = Set3) + geom_bar(mapping = aes(x = LEAP_Status, fill = LEAP_Status)) + ggtitle("Number of Individuals who Did Not Pass HSE based on LEAP Status")
+plot2
+
+Chart2.1 <- read_excel("Condensed_Chart.xlsx")
+plot <- ggplot(data = Chart2.1) + geom_bar(mapping = aes(x = Status, y = Count, fill = Pass_HSE), stat = "identity") + geom_text(aes(x = Status, y = Count, label = Count), position = position_stack(reverse = TRUE),size = 5, vjust = 1)
+plot
+```
+The first two graphs show the number of individuals who Passed the HSE in each Status category and the number of individuals who didn't Pass the HSE in each Status category. The third graph display both the amount of students who passed and didn't pass in each Status category. It is evident that for those who Completed the LEAP work, 75% of them passed the HSE with only 25% not. In comparison, the other status category's have counts that are closer in value. 
