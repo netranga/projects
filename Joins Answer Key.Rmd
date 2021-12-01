@@ -1,0 +1,72 @@
+---
+title: "R Session Joins Answer Key"
+author: "Netra"
+date: "5/11/2021"
+output: html_document
+---
+
+We want to explore the relationship between population size for US states and electoral votes. We have the population size in the murders dataset and electoral votes in the polls_us_election_2016 and results_us_relection_2016
+
+```{r}
+#load tidyverse, dslabds libraries 
+#load the murders, polls_us_election_2016, results_us_election_2016 datasets. Hint recall to use data(name of dataset)
+library(tidyverse)
+library(dslabs)
+data("murders")
+head(polls_us_election_2016)
+head(results_us_election_2016)
+```
+
+1.
+```{r}
+Set1 <- left_join(murders, results_us_election_2016, by = "state") %>%
+  select(-others) 
+head(Set1)
+```
+
+2.
+```{r}
+Set2<- Set1 %>% rename(ev = electoral_votes)
+head(Set2)
+```
+
+3. In practice, it is not always the case that each row in one table has a matching row in the other. For this reason, we have several versions of join. To illustrate this challenge, we will take subsets of the tables above. We create the tables tab1 and tab2 so that they have some states in common but not all:
+
+Refrences these subsets for the next few questions
+```{r}
+tab_1 <- slice(murders, 1:6) %>% select(state, population)
+tab_1
+tab_2 <- results_us_election_2016 %>% 
+  filter(state%in%c("Alabama", "Alaska", "Arizona", 
+                    "California", "Connecticut", "Delaware")) %>% 
+  select(state, electoral_votes) %>% rename(ev = electoral_votes)
+tab_2
+```
+
+4.
+```{r}
+left_join(tab_1, tab_2, by = "state")
+```
+
+5.
+```{r}
+tab_1 %>% right_join(tab_2, by = "state")
+```
+
+6.
+```{r}
+inner_join(tab_1, tab_2, by = "state")
+```
+
+7.
+```{r}
+full_join(tab_1, tab_2, by = "state")
+```
+
+8.
+```{r}
+anti_join(tab_1, tab_2, by = "state")
+```
+
+9.
+10.

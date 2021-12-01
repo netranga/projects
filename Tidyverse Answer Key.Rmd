@@ -1,0 +1,70 @@
+---
+title: "Tidyverse Answer Key"
+author: "Netra"
+date: "5/10/2021"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(dslabs)
+data("murders")
+```
+
+1. Create a new variable called rate that takes the variable total and divides it by the variable population and then multiplies this by 10000
+```{r}
+murders2 <- mutate(murders, rate = total / population * 100000)
+murders2
+```
+
+2. Modify the dataset to only include the the state, region and rate columns and then only show the rows for which the murder rate is lower than 0.71
+```{r}
+murders3 <- murders2 %>% select(state, region, rate) %>% filter(rate <= 0.71)
+murders3
+```
+
+3. Create a variable called MurderRank which contains the rank, from highest to lowest murder rate. Hint using the arrange function and desc function within arrange will help you solve this.
+```{r}
+murders4 <- mutate(murders, rate =  total / population * 100000, rank = rank(rate)) %>% arrange(desc(rate))
+
+```
+
+4. Use filter to show the top 5 states with the highest murder rates. Remember that you can filter based on the rank column.
+```{r}
+murders5 <- murders4 %>% filter(rank <= 5)
+murders5
+```
+
+5. Create a new data frame called no_south that removes states from the South region. How many states are in this category?
+```{r}
+no_south <- filter(murders4, region != "South" ) %>% count()
+no_south
+```
+
+6. Suppose you want to live in the Northeast or West and want the murder rate to be less than 1. We want to see the data for the states satisfying these options.
+```{r}
+murders_nw <- filter(murders4, region %in% c("Northeast", "West"))
+murders_nw
+```
+
+7. Order the states by population size. Use the dataset from question 3. For example if you started piping through murders 2 and left the final dataset as murders 3, I want you to start this question by piping through murders 3.
+```{r}
+murders6 <- murders4 %>%
+  arrange(population) %>%
+  head()
+murders6
+```
+
+8. Computer the average murder rate for the whole country (hint use summarize). Use the dataset from question 3. For example if you started piping through murders 2 and left the final dataset as murders 3, I want you to start this question by piping through murders 3.
+```{r}
+summarize(murders4, mean(rate))
+```
+
+
+9. Compute the median murder rate in the four regions of the country (hint need to use group_by to analyze data based on region and use summarize function). Use the dataset from question 3. For example if you started piping through murders 2 and left the final dataset as murders 3, I want you to start this question by piping through murders 3.
+```{r}
+murders4 %>% 
+  group_by(region) %>%
+  summarize(median_rate = median(rate))
+```
+
+
