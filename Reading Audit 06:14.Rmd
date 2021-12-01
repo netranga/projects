@@ -1,0 +1,70 @@
+---
+title: "Education2 dataset"
+author: "Netra"
+date: "6/14/2021"
+output: html_document
+---
+```{r}
+library(dplyr)
+library(readxl)
+library(tidyverse)
+E1 <- read_excel("Downloads/Reading Audit Verison 2.xlsx")
+Literacy_Level <- names(E1)[-1][max.col(E1[-1] >= 3, 'last')]
+E1[E1 == 0] <- NA
+E1[E1 == 1] <- NA
+E1[E1 == 2] <- NA
+E2 <- E1 %>% mutate(Frequency = coalesce(M, L, K, J, I, H, G, F, E, D, C, B, A))
+E2$Literacy_Level <- Literacy_Level
+E3 <- E2 %>% select(Name, Frequency, Literacy_Level)
+E3 <- as.data.frame(E3)
+E3[is.na(E3)] <- 0
+E4 <- within(E3, Literacy_Level[Frequency == 0 & Literacy_Level == 'M'] <- 'A')
+```
+
+```{r}
+#Dates
+library(dplyr)
+library(readxl)
+IA_Date <- read_excel("Downloads/Reading Audit Date 2.xlsx")
+IA_Date1 <- IA_Date %>% mutate(Date = as.Date(Date, format = "%d/%m/%Y")) %>% group_by(Name) %>% summarize(last_date = max(Date))
+E5 <- left_join(E4, IA_Date1, by = "Name")
+E6 <- E5 %>% rename(Last_Date_Tested = last_date)
+month <- format(E6$Last_Date_Tested, "%m")
+E6$Month <- month
+#E6$Literacy_Level <- as.character(E6$Literacy_Level)
+E6$Literacy_Level[which(E6$Literacy_Level=="A")] <- 1
+E6$Literacy_Level[which(E6$Literacy_Level=="B")] <- 2
+E6$Literacy_Level[which(E6$Literacy_Level=="C")] <- 3
+E6$Literacy_Level[which(E6$Literacy_Level=="D")] <- 4
+E6$Literacy_Level[which(E6$Literacy_Level=="E")] <- 5
+E6$Literacy_Level[which(E6$Literacy_Level=="F")] <- 6
+E6$Literacy_Level[which(E6$Literacy_Level=="G")] <- 7
+E6$Literacy_Level[which(E6$Literacy_Level=="H")] <- 8
+E6$Literacy_Level[which(E6$Literacy_Level=="I")] <- 9
+E6$Literacy_Level[which(E6$Literacy_Level=="J")] <- 10
+E6$Literacy_Level[which(E6$Literacy_Level=="K")] <- 11
+E6$Literacy_Level[which(E6$Literacy_Level=="L")] <- 12
+E6$Literacy_Level[which(E6$Literacy_Level=="M")] <- 13
+E6$Literacy_Level <- as.numeric(E6$Literacy_Level)
+str(E6)
+#first condition is for all months having a lit level of 10+, then literacy level of 6 and up for month 11, then literacy level of 7 and up for month 12, then literacy level of 8 and up for month 1, literacy level of 8 and up for month 2, literacy level of 9 and up for month 3, literacy level of 9 and up for month 4. This should cover all the cases!
+FinalE <- E6 %>% mutate(Met_Literacy = case_when(Literacy_Level >= 10 & Month >= "01" ~ "Yes", Literacy_Level >= 6 & Month == "11" ~ "Yes", Literacy_Level >= 7 & Month == "12" ~ "Yes", Literacy_Level >= 8 & Month == "01" ~ "Yes", Literacy_Level >= 8 & Month == "02" ~ "Yes", Literacy_Level >= 9 & Month == "03" ~ "Yes", Literacy_Level >= 9 & Month == "04" ~ "Yes", TRUE ~ "No"))
+FinalE$Literacy_Level[which(E6$Literacy_Level==1)] <- "A"
+FinalE$Literacy_Level[which(E6$Literacy_Level==2)] <- "B"
+FinalE$Literacy_Level[which(E6$Literacy_Level==3)] <- "C"
+FinalE$Literacy_Level[which(E6$Literacy_Level==4)] <- "D"
+FinalE$Literacy_Level[which(E6$Literacy_Level==5)] <- "E"
+FinalE$Literacy_Level[which(E6$Literacy_Level==6)] <- "F"
+FinalE$Literacy_Level[which(E6$Literacy_Level==7)] <- "G"
+FinalE$Literacy_Level[which(E6$Literacy_Level==8)] <- "H"
+FinalE$Literacy_Level[which(E6$Literacy_Level==9)] <- "I"
+FinalE$Literacy_Level[which(E6$Literacy_Level==10)] <- "J"
+FinalE$Literacy_Level[which(E6$Literacy_Level==11)] <- "K"
+FinalE$Literacy_Level[which(E6$Literacy_Level==12)] <- "L"
+FinalE$Literacy_Level[which(E6$Literacy_Level==13)] <- "M"
+
+
+library(writexl)
+write.csv(FinalE,"Downloads/ReadingAudit2.csv", row.names = FALSE)
+```
+
